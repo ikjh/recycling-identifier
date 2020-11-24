@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rest-server
+spec:
+  selector:
+    matchLabels:
+      app: rest-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rest-server
+    spec:
+      containers:
+      - name: rest-server
+        image: gcr.io/final-recycling-project/rest-server:0.1
+        env:
+          - name: RABBITMQ_HOST
+            value: "10.3.251.0"
+          - name: POSTGRES_HOST
+            value: "10.3.251.187"
+        ports:
+        - containerPort: 5000
+      imagePullSecrets:
+      - name: gcr-secret

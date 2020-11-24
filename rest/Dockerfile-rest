@@ -1,0 +1,9 @@
+FROM python:3.7
+
+RUN mkdir /app
+WORKDIR /app
+ADD . /app/
+RUN pip install pika psycopg2 jsonpickle requests flask google-cloud-storage
+
+EXPOSE 5000
+CMD ["python", "/app/rest-server.py"]

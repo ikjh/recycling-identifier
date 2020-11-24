@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logs
+spec:
+  selector:
+    matchLabels:
+      app: logs
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: logs
+    spec:
+      containers:
+      - name: rest-logs
+        image: gcr.io/final-recycling-project/logs:0.1
+        env:
+          - name: RABBITMQ_HOST
+            value: "10.3.251.0"
+      imagePullSecrets:
+      - name: gcr-secret
