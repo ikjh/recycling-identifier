@@ -14,12 +14,12 @@ spec:
     spec:
       containers:
       - name: rest-server
-        image: gcr.io/final-recycling-project/rest-server:0.1
+        image: gcr.io/final-recycling-project/rest-server:0.6
         env:
           - name: RABBITMQ_HOST
-            value: "10.3.251.0"
+            value: "10.3.252.34"
           - name: POSTGRES_HOST
-            value: "10.3.251.187"
+            value: "10.3.250.193"
         ports:
         - containerPort: 5000
       imagePullSecrets:

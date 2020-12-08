@@ -1,5 +1,5 @@
 LOG_VERSION=0.1
-REST_VERSION=0.1
+REST_VERSION=0.6
 
 build-log:
 	docker build -f Dockerfile-logs -t logs:$(LOG_VERSION) .

@@ -17,12 +17,6 @@ postgresHost = os.getenv("POSTGRES_HOST") or "localhost"
 
 print("Connecting to rabbitmq({}) and postgres({})".format(rabbitMQHost,postgresHost))
 
-postgresConn = psycopg2.connect(
-    host=postgresHost,
-    database="postgresdb",
-    user="postgresadmin",
-    password="admin123")
-
 app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
@@ -39,6 +33,7 @@ def scanUrl():
     wchannel.queue_declare(queue='workerimg')
     lchannel.exchange_declare(exchange='logs', exchange_type='topic')
     try:
+        #get hash and url of image
         url = jsonpickle.decode(request.data)['url']
         img_response = requests.get(url)
         ioBuffer = img_response.content
@@ -48,12 +43,13 @@ def scanUrl():
         response = {'hash': hash}
         message = {'hash': hash, 'name': url}
 
+        #add image to storage bucket
         storage_client = storage.Client()
-        bucket = storage_client.bucket('trash-imgs')
+        bucket = storage_client.bucket('recyclables')
         blob = bucket.blob(url.split('/')[-1])
         if(img_response.headers.get('content-type').startswith("image")):
             blob.upload_from_string(img_response.content, content_type=img_response.headers.get('content-type'))
-            log_message2 = '0.0.0.0.rest.info POST /scan/image/' + url + ' uploaded to trash-imgs bucket'
+            log_message2 = '0.0.0.0.rest.info POST /scan/image/' + url + ' uploaded to recyclables bucket'
             lchannel.basic_publish(exchange='logs', routing_key='info', body=log_message2)
         
         wchannel.basic_publish(exchange='toWorker', routing_key='workerimg', body=json.dumps(message))
@@ -75,27 +71,42 @@ def scanUrl():
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
 
-@app.route('/check/<string:hash>', methods=['GET'])
-def getIsRecyclable(hash):
+@app.route('/check/<string:hashImg>', methods=['GET'])
+def getIsRecyclable(hashImg):
+    # handle logs to rabbitmq
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbitMQHost))
     channel = connection.channel()
     channel.exchange_declare(exchange='logs', exchange_type='topic')
+
+    object_name = 'none'
+    recyclable = 'no'
     
-    response = 'no'
-    # TO DO: query database
-    hashes = None
-    if hashes is None:
-        log_message = '0.0.0.0.rest.info GET /check/' + hash + ' has not been scanned.'
-    elif hashes == []:
-        log_message = '0.0.0.0.rest.info GET /check/' + hash + ' is not recyclable'
-    else:
-        log_message = '0.0.0.0.rest.info GET /check/' + hash + ' is recyclable'
-        response = 'yes'
+    # query database
+    postgresConn = None
+    try:
+        postgresConn = psycopg2.connect(host=postgresHost, database="postgresdb", user="postgresadmin", password="admin123")
+        cur = postgresConn.cursor()
+        cur.execute("SELECT object, is_recyclable FROM images WHERE hash_id=%s", (hashImg,))
+        row = cur.fetchone()
+        if row is None:
+            log_message = '0.0.0.0.rest.info GET /check/' + hashImg + ' has not been scanned.'
+        else:
+            object_name = row[0]
+            recyclable = row[1]
+            log_message = '0.0.0.0.rest.info GET /check/' + hashImg + ' response=' + row[1]
+        channel.basic_publish(exchange='logs', routing_key='info', body=log_message)
 
-    channel.basic_publish(exchange='logs', routing_key='info', body=log_message)
+    except (Exception, psycopg2.DatabaseError) as error:
+        err_message = '0.0.0.0.rest.info GET /check/' + hashImg + error
+        channel.basic_publish(exchange='logs', routing_key='info', body=err_message)
+    finally:
+        if postgresConn is not None:
+            postgresConn.close()
 
+    cur.close()
+    postgresConn.close()
     connection.close()
-    return {'isRecyclable' : response}
+    return {'object': object_name, 'isRecyclable' : recyclable}
 
 # start flask app
 app.run(host="0.0.0.0")

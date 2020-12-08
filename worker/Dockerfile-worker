@@ -1,0 +1,8 @@
+FROM python:3.7
+
+RUN mkdir /app
+WORKDIR /app
+ADD . /app/
+RUN pip install pika psycopg2 jsonpickle requests google-cloud-storage google-cloud-vision
+
+CMD ["python", "-u", "/app/worker-server.py"]

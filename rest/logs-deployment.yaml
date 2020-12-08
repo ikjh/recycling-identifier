@@ -17,6 +17,6 @@ spec:
         image: gcr.io/final-recycling-project/logs:0.1
         env:
           - name: RABBITMQ_HOST
-            value: "10.3.251.0"
+            value: "10.3.252.34"
       imagePullSecrets:
       - name: gcr-secret

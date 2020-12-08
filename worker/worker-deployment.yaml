@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-server
+spec:
+  selector:
+    matchLabels:
+      app: worker-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: worker-server
+    spec:
+      containers:
+      - name: worker-server
+        image: gcr.io/final-recycling-project/worker-server:1.3
+        env:
+          - name: RABBITMQ_HOST
+            value: "10.3.252.34"
+          - name: POSTGRES_HOST
+            value: "10.3.250.193"
+      imagePullSecrets:
+      - name: gcr-secret
